@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Udemy Big Data Course Stack - Kinesis and S3 Part
+Metadata:
+  Authors:
+    Description: Andrew Saushkin (asaushkin@gmail.com)
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Kinesis configuration
+        Parameters:
+          - ShardCount
+          - S3BucketName
+    ParameterLabels:
+      - ShardCount:
+          default: Number of Kinesis streams shards
+      - S3BucketName:
+          default: S3 data lake bucket name
+Parameters:
+  ShardCount:
+    Default: 1
+    Type: Number
+  S3BucketName:
+    Type: String
+Rules:
+  RegionSupport:
+    Assertions:
+      - Assert:
+          Fn::Contains:
+            - - 'us-west-2'
+            - !Ref 'AWS::Region'
+        AssertDescription: This stack is only available in the US West (Oregon). Please launch the stack in one of these regions to continue.
+Resources:
+
+  # So, we define S3 bucket as data lake with the same name as a new stack
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+
+  PurchaseLogs:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        RoleARN: !GetAtt DeliveryRole.Arn
+        BucketARN: !GetAtt S3Bucket.Arn
+        BufferingHints:
+          SizeInMBs: 5
+          IntervalInSeconds: 60
+        CompressionFormat: UNCOMPRESSED
+
+  DeliveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref 'AWS::AccountId'
+      Path: "/"
+      Policies:
+        - PolicyName: firehose_delivery_policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:AbortMultipartUpload'
+                  - 's3:GetBucketLocation'
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:PutObject'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - !Ref S3Bucket
+                  - !Join
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - !Ref S3Bucket
+                      - '*'
+              - Effect: Allow
+                Action: 'glue:GetTableVersions'
+                Resource: '*'
+              - Effect: Allow
+                Action: 'logs:PutLogEvents'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:aws:logs:'
+                      - !Ref 'AWS::Region'
+                      - ':'
+                      - !Ref 'AWS::AccountId'
+                      - 'log-group:/aws/kinesisfirehose/*:log-stream:*'
+
+  CadabraOrders:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      ShardCount: !Ref ShardCount
+
+
+Outputs:
+  FirehosePurchaseLogs:
+    Description: Firehose purchase logs
+    Value: !Ref PurchaseLogs
+
+  CadabraOrders:
+    Description: Cadabra realtime data stream
+    Value: !Ref CadabraOrders
+

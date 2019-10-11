@@ -27,18 +27,22 @@ Rules:
         AssertDescription: This stack is only available in the US West (Oregon). Please launch the stack in one of these regions to continue.
 Resources:
 
-  S3Bucket:
-    Type: AWS::S3::Bucket
+  Kinesis:
+    Type: AWS::CloudFormation::Stack
     Properties:
-      BucketName: !Ref AWS::StackName
+      TemplateURL: kinesis-s3.yaml
+      Parameters:
+        ShardCount: !Ref ShardCount
+        S3BucketName: !Ref AWS::StackName
 
-#  PurchaseLogs:
-#    Type: AWS::KinesisFirehose::DeliveryStream
-#    Properties:
-#      DeliveryStreamType: DirectPut
-#
-#
-#  BcnStream:
-#    Type: AWS::Kinesis::Stream
-#    Properties:
-#      ShardCount: !Ref ShardCount
+  EC2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ec2.yaml
+      Parameters:
+        KinesisDataFirehose: !GetAtt Kinesis.Outputs.FirehosePurchaseLogs
+        CadabraOrders: !GetAtt Kinesis.Outputs.CadabraOrders
+        KeyName: id_rsa
+        InstanceType: t2.micro
+        InstanceRole: EC2AdministratorRole
+

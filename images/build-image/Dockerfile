@@ -1,0 +1,5 @@
+FROM circleci/openjdk:11-jdk
+
+RUN sudo apt-get update && sudo apt-get install python3 python3-pip && \
+    sudo pip3 install awscli
+

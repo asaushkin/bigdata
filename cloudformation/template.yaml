@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Udemy Big Data Course Stack
+Metadata:
+  Authors:
+    Description: Andrew Saushkin (asaushkin@gmail.com)
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: General Configuration
+        Parameters:
+          - ShardCount
+    ParameterLabels:
+      - ShardCount:
+          default: Number of Kinesis streams shards
+Parameters:
+  ShardCount:
+    Default: 1
+    Type: Number
+Rules:
+  RegionSupport:
+    Assertions:
+      - Assert:
+          Fn::Contains:
+            - - 'us-west-2'
+            - !Ref 'AWS::Region'
+        AssertDescription: This stack is only available in the US West (Oregon). Please launch the stack in one of these regions to continue.
+Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+
+
+#  PurchaseLogs:
+#    Type: AWS::KinesisFirehose::DeliveryStream
+#    Properties:
+#      DeliveryStreamType: DirectPut
+#
+#
+#  BcnStream:
+#    Type: AWS::Kinesis::Stream
+#    Properties:
+#      ShardCount: !Ref ShardCount

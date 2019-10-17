@@ -27,6 +27,11 @@ Rules:
         AssertDescription: This stack is only available in the US West (Oregon). Please launch the stack in one of these regions to continue.
 Resources:
 
+  DynamoDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: dynamodb.yaml
+
   Kinesis:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -42,6 +47,7 @@ Resources:
       Parameters:
         KinesisDataFirehose: !GetAtt Kinesis.Outputs.FirehosePurchaseLogs
         CadabraOrders: !GetAtt Kinesis.Outputs.CadabraOrders
+        DynamoCadabraOrders: !GetAtt DynamoDB.Outputs.DynamoCadabraOrders
         KeyName: id_rsa
         InstanceType: t2.micro
         InstanceRole: EC2AdministratorRole

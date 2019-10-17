@@ -22,8 +22,10 @@ if [[ $? != 0 ]]; then
 fi
 
 function cleanup_and_exit() {
-  ${AWS_CLI} s3 rb s3://$STACK_NAME --force
-  ${AWS_CLI} cloudformation delete-stack --stack-name "$STACK_NAME"
+  if [[ ! -z ${CIRCLE_SHA1} ]]; then
+    ${AWS_CLI} s3 rb s3://$STACK_NAME --force
+    ${AWS_CLI} cloudformation delete-stack --stack-name "$STACK_NAME"
+  fi
   exit $1
 }
 
@@ -56,8 +58,6 @@ ${AWS_CLI} --region $REGION_NAME cloudformation describe-stack-events --stack-na
 if [[ $RETURN_VALUE -ne 0 ]]; then
   cleanup_and_exit $RETURN_VALUE
 fi
-
-
 cd -
 ####
 
@@ -65,7 +65,4 @@ gradle test -DstackName="${STACK_NAME}"
 RETURN_VALUE=$?
 
 ####
-
 cleanup_and_exit $RETURN_VALUE
-
-

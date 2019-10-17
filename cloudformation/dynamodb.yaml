@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Udemy Big Data Course Stack - DynamoDB
+
+Resources:
+
+  CadabraOrders:
+    Type: AWS::DynamoDB::Table
+    Properties:
+
+      AttributeDefinitions:
+        -
+          AttributeName: "CustomerID"
+          AttributeType: "N"
+        -
+          AttributeName: "OrderID"
+          AttributeType: "S"
+
+      KeySchema:
+        -
+          AttributeName: "CustomerID"
+          KeyType: "HASH"
+        -
+          AttributeName: "OrderID"
+          KeyType: "RANGE"
+
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+Outputs:
+  DynamoCadabraOrders:
+    Description: Cadabra DynamoDB order table
+    Value: !Ref CadabraOrders

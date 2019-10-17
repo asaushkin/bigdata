@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: Udemy Big Data Course Stack - EC2 LogGenerator
 
 Parameters:
@@ -6,7 +7,10 @@ Parameters:
     Description: Name of an Kinesis Data Firehose pipe to S3 data lake
     Type: String
   CadabraOrders:
-    Description: Cadabra real time data stream
+    Description: Cadabra real time kinesis data stream
+    Type: String
+  DynamoCadabraOrders:
+    Description: Cadabra DynamoDB table for cadabra orders
     Type: String
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
@@ -77,8 +81,11 @@ Resources:
           packages:
             yum:
               aws-kinesis-agent: []
+            python:
+              boto3: []
           sources:
-            /home/ec2-user/bin: http://media.sundog-soft.com/AWSBigData/LogGenerator.zip
+            /home/ec2-user/bin:
+              http://media.sundog-soft.com/AWSBigData/LogGenerator.zip
           files:
             /etc/aws-kinesis/agent.json:
               content: !Sub |
@@ -105,9 +112,6 @@ Resources:
                     }
                   ]
                 }
-              mode: "000644"
-              owner: "root"
-              group: "root"
 
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -125,12 +129,26 @@ Resources:
                 path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
 
+            /home/ec2-user/.aws/config:
+              content: !Sub |
+                [profile default]
+                region = us-west-2
+
           commands:
             post-instal:
-              command: |
-                /bin/mkdir -p /var/log/cadabra
-                /bin/chmod 0755 /home/ec2-user/bin/LogGenerator.py
-                /bin/chmod 0644 /home/ec2-user/bin/OnlineRetail.csv
+              command: !Sub |
+                mkdir -p /var/log/cadabra
+                chown ec2-user /var/log/cadabra /home/ec2-user/bin
+
+                chmod 0755 /home/ec2-user/bin/LogGenerator.py
+                chmod 0644 /home/ec2-user/bin/OnlineRetail.csv
+                wget http://media.sundog-soft.com/AWSBigData/Consumer.py \
+                  -O /home/ec2-user/bin/Consumer.py
+                chmod 0755 /home/ec2-user/bin/Consumer.py
+                sed -i \
+                  -e "s/StreamName=\"CadabraOrders\"/StreamName=\"${CadabraOrders}\"/" \
+                  -e "s/dynamodb.Table('CadabraOrders')/dynamodb.Table('${DynamoCadabraOrders}')/" \
+                  /home/ec2-user/bin/Consumer.py
 
           services:
             sysvinit:
